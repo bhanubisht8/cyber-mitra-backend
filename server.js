@@ -8,6 +8,7 @@ const { createClient } = require('@supabase/supabase-js');
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 10000;
+const APP_VERSION = "1.0.3-debug";
 
 // Initialize Supabase
 const supabase = createClient(
@@ -20,10 +21,17 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Diagnostic: List Models
 async function listModels() {
+    console.log(`DEBUG [${APP_VERSION}]: Checking available models...`);
     try {
         const result = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${process.env.GEMINI_API_KEY}`);
         const data = await result.json();
-        console.log("DEBUG: Available Gemini Models:", data.models ? data.models.map(m => m.name) : "None found");
+        
+        if (data.error) {
+            console.error("DEBUG: Google API returned an error:", data.error);
+        } else {
+            console.log("DEBUG: Full Google Model List Response:", JSON.stringify(data).substring(0, 500) + "...");
+            console.log("DEBUG: Models Summary:", data.models ? data.models.map(m => m.name.split('/').pop()) : "None");
+        }
     } catch (e) {
         console.error("DEBUG: Failed to list models:", e.message);
     }
@@ -31,14 +39,14 @@ async function listModels() {
 listModels();
 
 // 2. Middleware
-app.use(cors()); // Allows all origins for development/prototype
+app.use(cors());
 app.use(express.json());
 
 // 3. Routes
 
 // Health Check
 app.get('/', (req, res) => {
-    res.send('Cyber Mitra Backend is Live!');
+    res.send(`Cyber Mitra Backend is Live! (v${APP_VERSION})`);
 });
 
 /**
@@ -46,15 +54,18 @@ app.get('/', (req, res) => {
  */
 app.post('/api/chat', async (req, res) => {
     const { message, history } = req.body;
+    // Using 'gemini-pro' as it is the most compatible across all regions/keys
+    const MODEL_NAME = "gemini-pro"; 
 
     try {
+        console.log(`DEBUG [${APP_VERSION}]: Chat request received. Using model: ${MODEL_NAME}`);
+        
         if (!process.env.GEMINI_API_KEY) {
-            console.error("DEBUG: GEMINI_API_KEY is missing!");
             return res.status(500).json({ error: "API Key missing." });
         }
 
         const model = genAI.getGenerativeModel({ 
-            model: "gemini-1.5-flash-latest",
+            model: MODEL_NAME,
             systemInstruction: "You are 'Cyber Mitra', a helpful AI Assistant for UP Police. Speak in Hinglish."
         });
 
@@ -64,8 +75,8 @@ app.post('/api/chat', async (req, res) => {
         
         res.json({ text: response.text() });
     } catch (error) {
-        console.error("DEBUG: Gemini API Error:", error.message || error);
-        res.status(500).json({ error: "AI Error: " + (error.message || "Failed to respond") });
+        console.error(`DEBUG [${APP_VERSION}]: Gemini Error with ${MODEL_NAME}:`, error.message);
+        res.status(500).json({ error: `AI Error (${MODEL_NAME}): ` + error.message });
     }
 });
 
@@ -74,23 +85,15 @@ app.post('/api/chat', async (req, res) => {
  */
 app.post('/api/reports', async (req, res) => {
     const reportData = req.body;
-
     try {
-        console.log("DEBUG: Attempting save to Supabase:", reportData.id);
-        const { data, error } = await supabase
-            .from('reports')
-            .insert([reportData])
-            .select();
-
+        console.log("DEBUG: Saving report:", reportData.id);
+        const { data, error } = await supabase.from('reports').insert([reportData]).select();
         if (error) {
-            console.error("DEBUG: Supabase Insert Error:", error);
+            console.error("DEBUG: Supabase Error:", error);
             return res.status(500).json({ error: error.message });
         }
-        
-        console.log("DEBUG: Supabase Success! Data returned:", data);
         res.json({ success: true, data });
     } catch (error) {
-        console.error("DEBUG: Backend Save Error:", error.message);
         res.status(500).json({ error: error.message });
     }
 });
@@ -100,19 +103,9 @@ app.post('/api/reports', async (req, res) => {
  */
 app.get('/api/reports/:id', async (req, res) => {
     const { id } = req.params;
-
     try {
-        const { data, error } = await supabase
-            .from('reports')
-            .select('*')
-            .eq('id', id.toUpperCase())
-            .single();
-
-        if (error) {
-            console.error("DEBUG: Fetch Error:", error.message);
-            if (error.code === 'PGRST116') return res.status(404).json({ error: "Report not found." });
-            throw error;
-        }
+        const { data, error } = await supabase.from('reports').select('*').eq('id', id.toUpperCase()).single();
+        if (error) return res.status(404).json({ error: "Not found" });
         res.json(data);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -124,38 +117,25 @@ app.get('/api/reports/:id', async (req, res) => {
  */
 app.get('/api/reports', async (req, res) => {
     try {
-        const { data, error } = await supabase
-            .from('reports')
-            .select('*')
-            .order('created_at', { ascending: false });
-
+        const { data, error } = await supabase.from('reports').select('*').order('created_at', { ascending: false });
         if (error) throw error;
         res.json(data);
     } catch (error) {
-        console.error("Supabase List Error:", error);
-        res.status(500).json({ error: "Failed to fetch reports." });
+        res.status(500).json({ error: error.message });
     }
 });
 
 /**
- * Update Report (Status, AI Insights, etc.)
+ * Update Report
  */
 app.patch('/api/reports/:id', async (req, res) => {
     const { id } = req.params;
-    const updateData = req.body;
-
     try {
-        const { data, error } = await supabase
-            .from('reports')
-            .update(updateData)
-            .eq('id', id.toUpperCase())
-            .select();
-
+        const { data, error } = await supabase.from('reports').update(req.body).eq('id', id.toUpperCase()).select();
         if (error) throw error;
         res.json({ success: true, data });
     } catch (error) {
-        console.error("Supabase Update Error:", error);
-        res.status(500).json({ error: "Failed to update report." });
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -164,39 +144,32 @@ app.patch('/api/reports/:id', async (req, res) => {
  */
 app.delete('/api/reports/:id', async (req, res) => {
     const { id } = req.params;
-
     try {
-        const { error } = await supabase
-            .from('reports')
-            .delete()
-            .eq('id', id.toUpperCase());
-
+        const { error } = await supabase.from('reports').delete().eq('id', id.toUpperCase());
         if (error) throw error;
         res.json({ success: true });
     } catch (error) {
-        console.error("Supabase Delete Error:", error);
-        res.status(500).json({ error: "Failed to delete report." });
+        res.status(500).json({ error: error.message });
     }
 });
 
 /**
- * AI Features Proxy (Urgency, Summary, Next Steps)
+ * AI Features Proxy
  */
 app.post('/api/ai/analyze', async (req, res) => {
     const { prompt, text } = req.body;
-
     try {
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
         const result = await model.generateContent(`${prompt}: "${text}"`);
         const response = await result.response;
         res.json({ result: response.text() });
     } catch (error) {
         console.error("DEBUG: AI Analyze Error:", error.message);
-        res.status(500).json({ error: "AI Error: " + error.message });
+        res.status(500).json({ error: error.message });
     }
 });
 
 // 4. Start Server
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Server running on port ${PORT} (v${APP_VERSION})`);
 });
