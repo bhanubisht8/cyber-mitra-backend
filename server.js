@@ -34,9 +34,11 @@ async function callGeminiWithRetry(modelObj, method, payload, retries = 2) {
             return await result.response;
         }
     } catch (error) {
-        if (error.message.includes('503') && retries > 0) {
-            console.log(`DEBUG: Gemini 503 (Busy). Retrying in 2s... (${retries} left)`);
-            await new Promise(r => setTimeout(r, 2000));
+        const isTransient = error.message.includes('503') || error.message.includes('429');
+        if (isTransient && retries > 0) {
+            const delay = error.message.includes('429') ? 5000 : 2000; // Wait longer for 429
+            console.log(`DEBUG: Gemini Error (${error.message.includes('429') ? '429' : '503'}). Retrying in ${delay/1000}s... (${retries} left)`);
+            await new Promise(r => setTimeout(r, delay));
             return callGeminiWithRetry(modelObj, method, payload, retries - 1);
         }
         throw error;
@@ -47,7 +49,7 @@ async function callGeminiWithRetry(modelObj, method, payload, retries = 2) {
 
 // Health Check
 app.get('/', (req, res) => {
-    res.send('Cyber Mitra Backend is Live! (v1.0.4-stable)');
+    res.send('Cyber Mitra Backend is Live! (v1.0.5-quota-fix)');
 });
 
 /**
@@ -55,7 +57,7 @@ app.get('/', (req, res) => {
  */
 app.post('/api/chat', async (req, res) => {
     const { message, history } = req.body;
-    const MODEL_NAME = "gemini-2.0-flash"; // Switching to 2.0-flash for better stability during high demand
+    const MODEL_NAME = "gemini-1.5-flash"; // Switching back to 1.5-flash for higher quota limits
 
     try {
         if (!process.env.GEMINI_API_KEY) {
@@ -72,7 +74,10 @@ app.post('/api/chat', async (req, res) => {
         res.json({ text: response.text() });
     } catch (error) {
         console.error(`Gemini Error (${MODEL_NAME}):`, error.message);
-        res.status(500).json({ error: "AI is currently very busy. Please try again in a moment." });
+        const errorMsg = error.message.includes('429') 
+            ? "AI is a bit overwhelmed right now. Please wait a minute and try again." 
+            : "AI is currently busy. Please try again later.";
+        res.status(500).json({ error: errorMsg });
     }
 });
 
@@ -156,7 +161,7 @@ app.delete('/api/reports/:id', async (req, res) => {
  */
 app.post('/api/ai/analyze', async (req, res) => {
     const { prompt, text } = req.body;
-    const MODEL_NAME = "gemini-2.0-flash";
+    const MODEL_NAME = "gemini-1.5-flash";
 
     if (!prompt || !text) {
         return res.status(400).json({ error: "Missing prompt or text." });
@@ -167,7 +172,7 @@ app.post('/api/ai/analyze', async (req, res) => {
         const response = await callGeminiWithRetry(model, 'generate', [`${prompt}:`, text]);
         res.json({ result: response.text() });
     } catch (error) {
-        console.error("AI Analyze Error:", error.message);
+        console.error(`AI Analyze Error (${MODEL_NAME}):`, error.message);
         res.status(500).json({ error: "AI Analysis failed. Try again later." });
     }
 });
