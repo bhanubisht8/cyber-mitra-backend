@@ -19,7 +19,7 @@ const supabase = createClient(
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // 2. Middleware
-app.use(cors()); // In production, restrict this to your GitHub Pages URL
+app.use(cors()); // Allows all origins for development/prototype
 app.use(express.json());
 
 // 3. Routes

@@ -10,16 +10,41 @@ const aiAssistant = {
 
     init: async function() {
         console.log("Cyber Mitra: Connecting to secure backend...");
-        try {
-            const res = await fetch(`${BACKEND_URL}/`);
-            if (res.ok) {
-                console.log("✅ Cyber Mitra: Connected to Backend.");
-                const statusDot = document.querySelector('.status-dot');
-                if (statusDot) statusDot.style.backgroundColor = '#2ecc71';
+        const statusDot = document.querySelector('.status-dot');
+        const statusText = document.querySelector('.header-info p');
+        
+        if (statusDot) statusDot.classList.add('connecting');
+        if (statusText) statusText.textContent = "Connecting to AI...";
+
+        const tryConnect = async (retries = 3) => {
+            try {
+                const res = await fetch(`${BACKEND_URL}/`);
+                if (res.ok) {
+                    console.log("✅ Cyber Mitra: Connected to Backend.");
+                    if (statusDot) {
+                        statusDot.classList.remove('connecting');
+                        statusDot.style.backgroundColor = '#2ecc71'; // Green
+                    }
+                    if (statusText) statusText.textContent = "AI Assistant (Online)";
+                    return true;
+                }
+            } catch (error) {
+                if (retries > 0) {
+                    console.log(`Retrying connection... (${retries} left)`);
+                    await new Promise(r => setTimeout(r, 2000));
+                    return tryConnect(retries - 1);
+                }
+                console.error("Backend Connection Error:", error);
+                if (statusDot) {
+                    statusDot.classList.remove('connecting');
+                    statusDot.style.backgroundColor = '#e74c3c'; // Red
+                }
+                if (statusText) statusText.textContent = "AI Assistant (Offline)";
             }
-        } catch (error) {
-            console.error("Backend Connection Error:", error);
-        }
+            return false;
+        };
+
+        await tryConnect();
     },
 
     /**
