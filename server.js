@@ -118,16 +118,16 @@ app.get('/api/reports', async (req, res) => {
 });
 
 /**
- * Update Report Status
+ * Update Report (Status, AI Insights, etc.)
  */
 app.patch('/api/reports/:id', async (req, res) => {
     const { id } = req.params;
-    const { status } = req.body;
+    const updateData = req.body;
 
     try {
         const { data, error } = await supabase
             .from('reports')
-            .update({ status })
+            .update(updateData)
             .eq('id', id.toUpperCase())
             .select();
 
@@ -135,7 +135,7 @@ app.patch('/api/reports/:id', async (req, res) => {
         res.json({ success: true, data });
     } catch (error) {
         console.error("Supabase Update Error:", error);
-        res.status(500).json({ error: "Failed to update report status." });
+        res.status(500).json({ error: "Failed to update report." });
     }
 });
 

@@ -130,11 +130,10 @@ const app = {
             const translation = await aiAssistant.translateToEnglish(description);
             
             // Update the record with AI data
-            await fetch(`${BACKEND_URL}/api/ai/analyze`, {
-                method: 'POST',
+            await fetch(`${BACKEND_URL}/api/reports/${id}`, {
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    id, 
                     ai_urgency: urgency, 
                     ai_translation: translation 
                 })
@@ -208,9 +207,18 @@ const app = {
 
         const summaryText = document.getElementById('ai-summary');
         const translationText = document.getElementById('ai-translation');
+        const priorityBadge = document.getElementById('ai-priority-badge');
         
         if (summaryText) summaryText.innerHTML = "Generating AI Summary...";
         if (translationText) translationText.innerHTML = found.ai_translation || "No translation needed.";
+        
+        if (priorityBadge) {
+            if (found.ai_urgency) {
+                priorityBadge.innerHTML = `<span class="badge badge-${found.ai_urgency.toLowerCase()}">${found.ai_urgency} Priority</span>`;
+            } else {
+                priorityBadge.innerHTML = '<span class="badge badge-medium">Processing...</span>';
+            }
+        }
 
         document.getElementById('detail-content').innerHTML = `
             <strong>ID:</strong> <p>${found.id}</p>
@@ -234,6 +242,20 @@ const app = {
 
         const summary = await aiAssistant.generateAdminSummary(found.description);
         if (summaryText) summaryText.innerHTML = summary || "Unavailable.";
+        
+        // If urgency was missing, let's try to get it now and update it
+        if (!found.ai_urgency) {
+            const urgency = await aiAssistant.assessUrgency(found.description);
+            if (urgency && priorityBadge) {
+                priorityBadge.innerHTML = `<span class="badge badge-${urgency.toLowerCase()}">${urgency} Priority</span>`;
+                // Save it back to DB
+                await fetch(`${BACKEND_URL}/api/reports/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ai_urgency: urgency })
+                });
+            }
+        }
     },
 
     updateStatus: async function(id, status) {
