@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UP Police | Citizen Service & Incident Reporting Portal</title>
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Header Section -->
+    <header>
+        <div class="container header-content">
+            <div class="logo-area">
+                <img src="logo.png" alt="UP Police Logo" class="upp-logo-img">
+                <div class="brand-text">
+                    <h1>UP POLICE</h1>
+                    <p>Technical Services</p>
+                </div>
+            </div>
+            <nav>
+                <ul id="nav-links">
+                    <li><a href="#" class="nav-link active" data-page="home">Home</a></li>
+                    <li><a href="#" class="nav-link" data-page="report">Report Incident</a></li>
+                    <li><a href="#" class="nav-link" data-page="track">Track Status</a></li>
+                    <li><a href="#" class="nav-link" data-page="admin">Admin Dashboard</a></li>
+                    <li><a href="#" class="nav-link" data-page="contact">Help/Contact</a></li>
+                </ul>
+                <div class="menu-toggle" id="mobile-menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="container">
+        
+        <!-- Home Section -->
+        <section id="home" class="page active">
+            <div class="hero">
+                <h2>सुरक्षा आपकी, संकल्प हमारा</h2>
+                <p>Welcome to the Technical Services Portal of Uttar Pradesh Police. We leverage cutting-edge technology to ensure the safety and security of every citizen.</p>
+                <div class="hero-actions">
+                    <button class="btn btn-primary" onclick="app.navigateTo('report')">File a Report</button>
+                    <button class="btn btn-secondary" onclick="app.navigateTo('track')">Track Complaint</button>
+                </div>
+            </div>
+            <div class="features-grid">
+                <div class="card">
+                    <h3>Swift Response</h3>
+                    <p>Our technical team ensures that every incident reported is routed to the nearest station immediately.</p>
+                </div>
+                <div class="card">
+                    <h3>Transparent Tracking</h3>
+                    <p>Monitor the progress of your complaint in real-time through our digital tracking system.</p>
+                </div>
+                <div class="card">
+                    <h3>24/7 Support</h3>
+                    <p>Technical assistance available around the clock for emergency reporting and technical issues.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Report Incident Section -->
+        <section id="report" class="page">
+            <div class="section-header">
+                <h2>Incident Reporting Form</h2>
+                <p>Please provide accurate details to help us serve you better.</p>
+            </div>
+            <div class="card form-container">
+                <form id="incident-form">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="fullName">Full Name *</label>
+                            <input type="text" id="fullName" required placeholder="Enter your full name">
+                        </div>
+                        <div class="form-group">
+                            <label for="mobile">Mobile Number *</label>
+                            <input type="tel" id="mobile" required placeholder="10-digit mobile number">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email Address</label>
+                            <input type="email" id="email" placeholder="example@email.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="incidentType">Incident Type *</label>
+                            <select id="incidentType" required>
+                                <option value="">Select Type</option>
+                                <option value="Theft">Theft / Burglary</option>
+                                <option value="Cyber Crime">Cyber Crime</option>
+                                <option value="Harassment">Harassment</option>
+                                <option value="Missing Person">Missing Person</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="location">Incident Location *</label>
+                            <input type="text" id="location" required placeholder="Exact address or landmark">
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="description">Detailed Description *</label>
+                            <textarea id="description" rows="5" required placeholder="Describe the incident in detail..."></textarea>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Submit Report</button>
+                        <button type="reset" class="btn btn-outline">Clear Form</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- Track Status Section -->
+        <section id="track" class="page">
+            <div class="section-header">
+                <h2>Track Your Complaint</h2>
+                <p>Enter your unique Complaint ID to check the current status.</p>
+            </div>
+            <div class="track-container">
+                <div class="search-box">
+                    <input type="text" id="trackId" placeholder="Enter Complaint ID (e.g., UPP-12345)">
+                    <button class="btn btn-primary" id="btn-track">Track Now</button>
+                </div>
+                <div id="track-result" class="track-result-area">
+                    <!-- Tracking details will appear here via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Admin Dashboard Section -->
+        <section id="admin" class="page">
+            <div class="section-header">
+                <h2>Admin Dashboard</h2>
+                <p>Management view for submitted incidents (Demo Only)</p>
+            </div>
+            <div class="stats-bar">
+                <div class="stat-card">
+                    <span class="stat-value" id="stat-total">0</span>
+                    <span class="stat-label">Total Reports</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="stat-pending">0</span>
+                    <span class="stat-label">Pending</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="stat-resolved">0</span>
+                    <span class="stat-label">Resolved</span>
+                </div>
+            </div>
+            <div class="admin-controls">
+                <input type="text" id="adminSearch" placeholder="Search by Name or ID...">
+            </div>
+            <div class="table-responsive">
+                <table id="complaintsTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Date</th>
+                            <th>Reporter</th>
+                            <th>Type</th>
+                            <th>Location</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-table-body">
+                        <!-- Data will be loaded via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact" class="page">
+            <div class="section-header">
+                <h2>Contact & Help</h2>
+                <p>Reach out to UP Police Technical Services</p>
+            </div>
+            <div class="contact-grid">
+                <div class="card">
+                    <h3>Headquarters</h3>
+                    <p>Technical Services Headquarters,<br>10th Floor, Signature Building,<br>Gomti Nagar Extension, Lucknow</p>
+                    <p><strong>Phone:</strong> 0522-2231234</p>
+                    <p><strong>Email:</strong> techserv@uppolice.gov.in</p>
+                </div>
+                <div class="card">
+                    <h3>Emergency Numbers</h3>
+                    <ul>
+                        <li>Police Emergency: 112</li>
+                        <li>Women Helpline: 1090</li>
+                        <li>Cyber Cell: 1930</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Success Modal -->
+    <div id="success-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="success-icon">✓</div>
+            <h2>Report Submitted!</h2>
+            <p>Your Complaint ID is: <strong id="new-id"></strong></p>
+            
+            <!-- AI Next Steps Area -->
+            <div id="ai-next-steps" class="ai-box" style="display: none; margin: 20px 0; text-align: left; background: #e8f4fd; padding: 15px; border-radius: 8px; border-left: 5px solid var(--primary-color);">
+                <h4 style="margin: 0 0 10px 0; color: var(--primary-color);">🤖 Cyber Mitra's Advice:</h4>
+                <div id="next-steps-content" style="font-size: 0.9rem; line-height: 1.5;">Generating safety tips...</div>
+            </div>
+
+            <p>Please keep this ID for future tracking.</p>
+            <button class="btn btn-primary" onclick="app.closeModal()">Close</button>
+        </div>
+    </div>
+
+    <!-- Detail Modal (Hidden by default) -->
+    <div id="detail-modal" class="modal">
+        <div class="modal-content" style="max-width: 800px; text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0;">Incident Details</h2>
+                <div id="ai-priority-badge"></div>
+                <button class="btn btn-outline" onclick="app.closeDetailModal()" style="padding: 5px 15px;">&times;</button>
+            </div>
+            
+            <div class="detail-grid-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div id="detail-content" class="detail-grid">
+                    <!-- Content injected by JS -->
+                </div>
+                
+                <!-- AI Admin Insights Sidebar -->
+                <div class="ai-admin-sidebar" style="background: #f0f4f8; padding: 20px; border-radius: 10px; border: 1px solid #d1d9e0;">
+                    <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 1.2rem;">🤖</span> AI Insights
+                    </h3>
+                    
+                    <div class="ai-insight-section">
+                        <strong>AI Executive Summary:</strong>
+                        <p id="ai-summary" style="font-size: 0.85rem; font-style: italic; color: #444;">Analyzing description...</p>
+                    </div>
+                    
+                    <div class="ai-insight-section" style="margin-top: 15px;">
+                        <strong>English Translation:</strong>
+                        <p id="ai-translation" style="font-size: 0.85rem; color: #444;">Checking language...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px; text-align: right;">
+                <button class="btn btn-primary" onclick="app.closeDetailModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Assistant (Cyber Mitra) -->
+    <div id="ai-chat-widget">
+        <button id="ai-chat-toggle" class="chat-fab" title="Cyber Mitra AI Assistant">
+            <span class="chat-icon">🤖</span>
+            <span class="chat-label">Cyber Mitra</span>
+        </button>
+        
+        <div id="ai-chat-window" class="chat-window">
+            <div class="chat-header">
+                <div class="header-info">
+                    <span class="status-dot"></span>
+                    <h3>Cyber Mitra</h3>
+                    <p>AI Assistant (Technical Services)</p>
+                </div>
+                <button id="ai-chat-close">&times;</button>
+            </div>
+            <div id="ai-chat-messages" class="chat-messages">
+                <div class="message ai-message">
+                    नमस्ते! मैं साइबर मित्र हूँ। मैं आपकी कैसे सहायता कर सकता हूँ? (Hello! I am Cyber Mitra. How can I help you today?)
+                </div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="ai-user-input" placeholder="Type your question...">
+                <button id="ai-send-btn">➤</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container footer-content">
+            <p>&copy; 2026 Uttar Pradesh Police - Technical Services. All Rights Reserved.</p>
+            <p>This is a student project submission for Web Development Bootcamp.</p>
+        </div>
+    </footer>
+
+    <!-- Google Generative AI SDK -->
+    <script type="importmap">
+    {
+      "imports": {
+        "@google/generative-ai": "https://esm.run/@google/generative-ai"
+      }
+    }
+    </script>
+    <script src="script.js"></script>
+    <script type="module" src="ai-assistant.js"></script>
+</body>
+</html>
