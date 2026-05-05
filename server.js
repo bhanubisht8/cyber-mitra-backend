@@ -8,6 +8,7 @@ const { createClient } = require('@supabase/supabase-js');
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 10000;
+const APP_VERSION = "1.0.6-final-stable";
 
 // Initialize Supabase
 const supabase = createClient(
@@ -36,8 +37,8 @@ async function callGeminiWithRetry(modelObj, method, payload, retries = 2) {
     } catch (error) {
         const isTransient = error.message.includes('503') || error.message.includes('429');
         if (isTransient && retries > 0) {
-            const delay = error.message.includes('429') ? 5000 : 2000; // Wait longer for 429
-            console.log(`DEBUG: Gemini Error (${error.message.includes('429') ? '429' : '503'}). Retrying in ${delay/1000}s... (${retries} left)`);
+            const delay = error.message.includes('429') ? 5000 : 2000;
+            console.log(`DEBUG: Gemini ${error.message.includes('429') ? '429' : '503'}. Retrying in ${delay/1000}s...`);
             await new Promise(r => setTimeout(r, delay));
             return callGeminiWithRetry(modelObj, method, payload, retries - 1);
         }
@@ -49,7 +50,7 @@ async function callGeminiWithRetry(modelObj, method, payload, retries = 2) {
 
 // Health Check
 app.get('/', (req, res) => {
-    res.send('Cyber Mitra Backend is Live! (v1.0.5-quota-fix)');
+    res.send(`Cyber Mitra Backend is Live! (v${APP_VERSION})`);
 });
 
 /**
@@ -57,7 +58,8 @@ app.get('/', (req, res) => {
  */
 app.post('/api/chat', async (req, res) => {
     const { message, history } = req.body;
-    const MODEL_NAME = "gemini-1.5-flash"; // Switching back to 1.5-flash for higher quota limits
+    // 'gemini-flash-latest' is the most stable alias found in your ListModels output
+    const MODEL_NAME = "gemini-flash-latest"; 
 
     try {
         if (!process.env.GEMINI_API_KEY) {
@@ -67,7 +69,8 @@ app.post('/api/chat', async (req, res) => {
         const model = genAI.getGenerativeModel({ 
             model: MODEL_NAME,
             systemInstruction: `You are 'Cyber Mitra', an AI Assistant for the Uttar Pradesh Police Technical Services Portal. 
-            Speak in Hinglish (Hindi + English). Be professional and empathetic.`
+            Speak in Hinglish (Hindi + English). Be professional and empathetic. 
+            IMPORTANT: You are an AI, for emergencies call 112.`
         });
 
         const response = await callGeminiWithRetry(model, 'chat', { message, history });
@@ -75,8 +78,8 @@ app.post('/api/chat', async (req, res) => {
     } catch (error) {
         console.error(`Gemini Error (${MODEL_NAME}):`, error.message);
         const errorMsg = error.message.includes('429') 
-            ? "AI is a bit overwhelmed right now. Please wait a minute and try again." 
-            : "AI is currently busy. Please try again later.";
+            ? "AI is a bit busy. Please wait a moment." 
+            : "AI service is currently busy. Please try again.";
         res.status(500).json({ error: errorMsg });
     }
 });
@@ -105,10 +108,7 @@ app.get('/api/reports/:id', async (req, res) => {
     const { id } = req.params;
     try {
         const { data, error } = await supabase.from('reports').select('*').eq('id', id.toUpperCase()).single();
-        if (error) {
-            if (error.code === 'PGRST116') return res.status(404).json({ error: "Report not found." });
-            throw error;
-        }
+        if (error) return res.status(404).json({ error: "Not found" });
         res.json(data);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -157,11 +157,11 @@ app.delete('/api/reports/:id', async (req, res) => {
 });
 
 /**
- * AI Features Proxy (Urgency, Summary, Next Steps)
+ * AI Features Proxy
  */
 app.post('/api/ai/analyze', async (req, res) => {
     const { prompt, text } = req.body;
-    const MODEL_NAME = "gemini-1.5-flash";
+    const MODEL_NAME = "gemini-flash-latest";
 
     if (!prompt || !text) {
         return res.status(400).json({ error: "Missing prompt or text." });
@@ -173,11 +173,11 @@ app.post('/api/ai/analyze', async (req, res) => {
         res.json({ result: response.text() });
     } catch (error) {
         console.error(`AI Analyze Error (${MODEL_NAME}):`, error.message);
-        res.status(500).json({ error: "AI Analysis failed. Try again later." });
+        res.status(500).json({ error: "AI Analysis failed." });
     }
 });
 
 // 4. Start Server
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Server running on port ${PORT} (v${APP_VERSION})`);
 });
