@@ -22,11 +22,32 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 app.use(cors());
 app.use(express.json());
 
+// Helper: AI Retry Logic
+async function callGeminiWithRetry(modelObj, method, payload, retries = 2) {
+    try {
+        if (method === 'chat') {
+            const chat = modelObj.startChat({ history: payload.history || [] });
+            const result = await chat.sendMessage(payload.message);
+            return await result.response;
+        } else {
+            const result = await modelObj.generateContent(payload);
+            return await result.response;
+        }
+    } catch (error) {
+        if (error.message.includes('503') && retries > 0) {
+            console.log(`DEBUG: Gemini 503 (Busy). Retrying in 2s... (${retries} left)`);
+            await new Promise(r => setTimeout(r, 2000));
+            return callGeminiWithRetry(modelObj, method, payload, retries - 1);
+        }
+        throw error;
+    }
+}
+
 // 3. Routes
 
 // Health Check
 app.get('/', (req, res) => {
-    res.send('Cyber Mitra Backend is Live!');
+    res.send('Cyber Mitra Backend is Live! (v1.0.4-stable)');
 });
 
 /**
@@ -34,8 +55,7 @@ app.get('/', (req, res) => {
  */
 app.post('/api/chat', async (req, res) => {
     const { message, history } = req.body;
-    // Updated to use a model confirmed to be available in your account
-    const MODEL_NAME = "gemini-2.5-flash"; 
+    const MODEL_NAME = "gemini-2.0-flash"; // Switching to 2.0-flash for better stability during high demand
 
     try {
         if (!process.env.GEMINI_API_KEY) {
@@ -45,19 +65,14 @@ app.post('/api/chat', async (req, res) => {
         const model = genAI.getGenerativeModel({ 
             model: MODEL_NAME,
             systemInstruction: `You are 'Cyber Mitra', an AI Assistant for the Uttar Pradesh Police Technical Services Portal. 
-            Your goal is to help citizens of Uttar Pradesh report incidents and understand the portal.
-            Be professional, helpful, and empathetic. Speak in a mix of Hindi and English (Hinglish).
-            IMPORTANT: You are an AI assistant, not a police officer. For emergencies, tell them to call 112.`
+            Speak in Hinglish (Hindi + English). Be professional and empathetic.`
         });
 
-        const chat = model.startChat({ history: history || [] });
-        const result = await chat.sendMessage(message);
-        const response = await result.response;
-        
+        const response = await callGeminiWithRetry(model, 'chat', { message, history });
         res.json({ text: response.text() });
     } catch (error) {
         console.error(`Gemini Error (${MODEL_NAME}):`, error.message);
-        res.status(500).json({ error: "AI failed to respond. Please try again." });
+        res.status(500).json({ error: "AI is currently very busy. Please try again in a moment." });
     }
 });
 
@@ -141,30 +156,19 @@ app.delete('/api/reports/:id', async (req, res) => {
  */
 app.post('/api/ai/analyze', async (req, res) => {
     const { prompt, text } = req.body;
+    const MODEL_NAME = "gemini-2.0-flash";
 
     if (!prompt || !text) {
-        return res.status(400).json({ error: "Missing prompt or text in request body." });
+        return res.status(400).json({ error: "Missing prompt or text." });
     }
 
     try {
-        console.log("DEBUG: AI Analyze Request - Prompt:", prompt.substring(0, 50));
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-        
-        // Use an array of parts for safer prompt construction
-        const result = await model.generateContent([
-            `${prompt}:`,
-            text
-        ]);
-        
-        const response = await result.response;
-        const resultText = response.text();
-        
-        if (!resultText) throw new Error("AI returned an empty response.");
-        
-        res.json({ result: resultText });
+        const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+        const response = await callGeminiWithRetry(model, 'generate', [`${prompt}:`, text]);
+        res.json({ result: response.text() });
     } catch (error) {
-        console.error("DEBUG: AI Analyze Error:", error.message);
-        res.status(500).json({ error: "AI Analysis failed: " + error.message });
+        console.error("AI Analyze Error:", error.message);
+        res.status(500).json({ error: "AI Analysis failed. Try again later." });
     }
 });
 
