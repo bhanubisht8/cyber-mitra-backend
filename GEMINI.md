@@ -5,13 +5,14 @@
 
 ## Project Type
 **Status:** Functional Prototype (Full-Stack Architecture)
+**Current Version:** `1.0.6-final-stable`
 
 ## Current Structure
 - `index.html`: Main structure of the application.
-- `script.js`: Frontend logic, now communicates with the Node.js backend.
-- `ai-assistant.js`: Frontend AI chat interface logic.
-- `server.js`: Secure Node.js/Express backend (handles AI proxying and DB).
-- `package.json`: Backend dependencies and scripts.
+- `script.js`: Frontend logic, communicating with the Node.js backend.
+- `ai-assistant.js`: Frontend AI chat interface logic and AI utility functions.
+- `server.js`: Secure Node.js/Express backend (v1.0.6) handling AI proxying and Supabase DB.
+- `package.json`: Backend dependencies (Express, Gemini SDK, Supabase SDK).
 - `style.css`: Professional government-themed styling.
 - `logo.png`: Local official logo image.
 
@@ -25,6 +26,8 @@
 ## AI Integration (Cyber Mitra)
 The portal features a sophisticated AI integration powered by **Google Gemini 1.5 Flash**.
 - **Architecture:** The API key is secured on a Node.js backend (hosted on Render) to prevent exposure and blacklisting.
+- **Model:** Uses `gemini-flash-latest` for high speed and reliability.
+- **Reliability:** Implemented **AI Retry Logic** to handle transient errors (429 Rate Limits and 503 Overloads) with exponential backoff.
 - **User Side:**
     - **Chat Interface:** Provides assistance in Hindi/English via backend proxy.
     - **Auto-Categorization:** Detects incident type from user descriptions.
@@ -36,13 +39,21 @@ The portal features a sophisticated AI integration powered by **Google Gemini 1.
 
 ## Database & Persistence
 - **Technology:** Supabase (PostgreSQL).
-- **Functionality:** Replaced `localStorage` with a persistent cloud database. Incident reports are now saved and retrieved via the backend API, allowing data to persist across sessions and devices.
+- **Functionality:** Replaced `localStorage` with a persistent cloud database. Incident reports are now saved and retrieved via the backend API (`/api/reports`).
+
+## API Endpoints (Backend)
+- `GET /`: Health check (returns version).
+- `POST /api/chat`: Handles Cyber Mitra chat conversations.
+- `POST /api/reports`: Submits a new incident report.
+- `GET /api/reports`: Retrieves all reports (Admin).
+- `GET /api/reports/:id`: Retrieves a single report (Tracking).
+- `POST /api/ai/analyze`: Proxy for specific AI tasks (Summary, Translation, etc.).
 
 ## Building and Running
 *   **Backend:** 
     - Set environment variables: `GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_KEY`.
     - Run `npm install` and `npm start`.
-*   **Frontend:** Open `index.html` (Update the API URL in the scripts to point to your backend).
+*   **Frontend:** Open `index.html` (Ensure `BACKEND_URL` in `script.js` and `ai-assistant.js` points to your backend).
 
 ## Troubleshooting & Technical Insights
 
