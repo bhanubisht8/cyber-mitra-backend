@@ -18,6 +18,18 @@ const supabase = createClient(
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
+// Diagnostic: List Models
+async function listModels() {
+    try {
+        const result = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${process.env.GEMINI_API_KEY}`);
+        const data = await result.json();
+        console.log("DEBUG: Available Gemini Models:", data.models ? data.models.map(m => m.name) : "None found");
+    } catch (e) {
+        console.error("DEBUG: Failed to list models:", e.message);
+    }
+}
+listModels();
+
 // 2. Middleware
 app.use(cors()); // Allows all origins for development/prototype
 app.use(express.json());
@@ -42,7 +54,7 @@ app.post('/api/chat', async (req, res) => {
         }
 
         const model = genAI.getGenerativeModel({ 
-            model: "gemini-1.5-flash",
+            model: "gemini-1.5-flash-latest",
             systemInstruction: "You are 'Cyber Mitra', a helpful AI Assistant for UP Police. Speak in Hinglish."
         });
 
@@ -97,13 +109,13 @@ app.get('/api/reports/:id', async (req, res) => {
             .single();
 
         if (error) {
+            console.error("DEBUG: Fetch Error:", error.message);
             if (error.code === 'PGRST116') return res.status(404).json({ error: "Report not found." });
             throw error;
         }
         res.json(data);
     } catch (error) {
-        console.error("Supabase Fetch Error:", error);
-        res.status(500).json({ error: "Database error." });
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -174,7 +186,7 @@ app.post('/api/ai/analyze', async (req, res) => {
     const { prompt, text } = req.body;
 
     try {
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
         const result = await model.generateContent(`${prompt}: "${text}"`);
         const response = await result.response;
         res.json({ result: response.text() });
