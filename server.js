@@ -36,6 +36,11 @@ app.post('/api/chat', async (req, res) => {
     const { message, history } = req.body;
 
     try {
+        if (!process.env.GEMINI_API_KEY) {
+            console.error("DEBUG: GEMINI_API_KEY is missing in environment variables!");
+            return res.status(500).json({ error: "Server Configuration Error: API Key missing." });
+        }
+
         const model = genAI.getGenerativeModel({ 
             model: "gemini-1.5-flash",
             systemInstruction: `You are 'Cyber Mitra', an AI Assistant for the Uttar Pradesh Police Technical Services Portal. 
@@ -50,8 +55,8 @@ app.post('/api/chat', async (req, res) => {
         
         res.json({ text: response.text() });
     } catch (error) {
-        console.error("Gemini Error:", error);
-        res.status(500).json({ error: "AI failed to respond. Please try again later." });
+        console.error("DEBUG: Gemini API Error:", error.message || error);
+        res.status(500).json({ error: error.message || "AI failed to respond." });
     }
 });
 
@@ -62,16 +67,22 @@ app.post('/api/reports', async (req, res) => {
     const reportData = req.body;
 
     try {
+        console.log("DEBUG: Attempting to save report to Supabase:", reportData.id);
         const { data, error } = await supabase
             .from('reports')
             .insert([reportData])
             .select();
 
-        if (error) throw error;
+        if (error) {
+            console.error("DEBUG: Supabase Insert Error Details:", error);
+            throw error;
+        }
+        
+        console.log("DEBUG: Report saved successfully:", reportData.id);
         res.json({ success: true, data });
     } catch (error) {
-        console.error("Supabase Save Error:", error);
-        res.status(500).json({ error: "Failed to save report to database." });
+        console.error("DEBUG: Backend Save Error:", error.message || error);
+        res.status(500).json({ error: error.message || "Failed to save report." });
     }
 });
 
