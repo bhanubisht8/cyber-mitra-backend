@@ -137,18 +137,34 @@ app.delete('/api/reports/:id', async (req, res) => {
 });
 
 /**
- * AI Features Proxy
+ * AI Features Proxy (Urgency, Summary, Next Steps)
  */
 app.post('/api/ai/analyze', async (req, res) => {
     const { prompt, text } = req.body;
+
+    if (!prompt || !text) {
+        return res.status(400).json({ error: "Missing prompt or text in request body." });
+    }
+
     try {
+        console.log("DEBUG: AI Analyze Request - Prompt:", prompt.substring(0, 50));
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-        const result = await model.generateContent(`${prompt}: "${text}"`);
+        
+        // Use an array of parts for safer prompt construction
+        const result = await model.generateContent([
+            `${prompt}:`,
+            text
+        ]);
+        
         const response = await result.response;
-        res.json({ result: response.text() });
+        const resultText = response.text();
+        
+        if (!resultText) throw new Error("AI returned an empty response.");
+        
+        res.json({ result: resultText });
     } catch (error) {
-        console.error("AI Analyze Error:", error.message);
-        res.status(500).json({ error: error.message });
+        console.error("DEBUG: AI Analyze Error:", error.message);
+        res.status(500).json({ error: "AI Analysis failed: " + error.message });
     }
 });
 
