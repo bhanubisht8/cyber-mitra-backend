@@ -136,7 +136,7 @@ app.get('/api/ai/models', async (req, res) => {
  */
 app.post('/api/chat', async (req, res) => {
     const { message, history } = req.body;
-    const MODEL_NAME = "gemini-1.5-flash"; 
+    const MODEL_NAME = "gemini-flash-latest"; 
 
     try {
         if (!process.env.GEMINI_API_KEY) {
@@ -204,7 +204,7 @@ app.get('/api/reports/:id', authenticateUser, async (req, res) => {
  */
 app.post('/api/ai/analyze', authenticateUser, async (req, res) => {
     const { prompt, text } = req.body;
-    const MODEL_NAME = "gemini-1.5-flash";
+    const MODEL_NAME = "gemini-flash-latest";
 
     try {
         const model = genAI.getGenerativeModel({ model: MODEL_NAME });
