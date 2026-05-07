@@ -82,7 +82,8 @@ header {
 nav ul {
     display: flex;
     list-style: none;
-    gap: 20px;
+    gap: 15px;
+    align-items: center; /* Ensure vertical centering for all items */
 }
 
 .nav-link {
@@ -92,10 +93,39 @@ nav ul {
     padding: 8px 12px;
     border-radius: 4px;
     transition: background 0.3s;
+    white-space: nowrap; /* Prevent text wrapping from breaking layout */
 }
 
 .nav-link:hover, .nav-link.active {
     background-color: rgba(255, 255, 255, 0.1);
+    color: var(--accent-color);
+}
+
+#user-profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 5px 12px;
+    border-radius: 4px;
+    margin-left: 5px;
+}
+
+#user-profile .btn-outline {
+    color: var(--white);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    background: transparent;
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.3s;
+}
+
+#user-profile .btn-outline:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent-color);
     color: var(--accent-color);
 }
 
