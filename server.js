@@ -116,7 +116,7 @@ app.get('/', (req, res) => {
  */
 app.post('/api/chat', async (req, res) => {
     const { message, history } = req.body;
-    const MODEL_NAME = "gemini-flash-latest"; 
+    const MODEL_NAME = "gemini-1.5-flash"; 
 
     try {
         if (!process.env.GEMINI_API_KEY) {
@@ -228,7 +228,7 @@ app.delete('/api/reports/:id', authenticateUser, requireAdmin, async (req, res) 
  */
 app.post('/api/ai/analyze', authenticateUser, async (req, res) => {
     const { prompt, text } = req.body;
-    const MODEL_NAME = "gemini-flash-latest";
+    const MODEL_NAME = "gemini-1.5-flash";
 
     if (!prompt || !text) {
         return res.status(400).json({ error: "Missing prompt or text." });

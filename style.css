@@ -763,17 +763,38 @@ footer {
     font-size: 0.8rem;
 }
 
-.full-width {
-    width: 100%;
-}
-
-#user-profile {
+#auth-buttons {
     display: flex;
     align-items: center;
+}
+
+#auth-buttons .btn-outline {
+    color: var(--white);
+    border-color: rgba(255, 255, 255, 0.5);
+    background: transparent;
+    padding: 8px 15px;
+    font-weight: 500;
+}
+
+#auth-buttons .btn-outline:hover {
     background: rgba(255, 255, 255, 0.1);
-    padding: 5px 15px;
-    border-radius: 20px;
-    margin-left: 10px;
+    border-color: var(--white);
+}
+
+/* Close Button Enhancement */
+.close-btn {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 2rem;
+    font-weight: bold;
+    color: #666;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.close-btn:hover {
+    color: var(--primary-color);
 }
 
 #user-display-name {

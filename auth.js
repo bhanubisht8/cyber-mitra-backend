@@ -134,6 +134,14 @@ const auth = {
     },
 
     attachEventListeners: function() {
+        // Close modal when clicking outside
+        window.addEventListener('click', (e) => {
+            const modal = document.getElementById('auth-modal');
+            if (e.target === modal) {
+                this.closeModal();
+            }
+        });
+
         const loginForm = document.getElementById('login-form');
         if (loginForm) {
             loginForm.addEventListener('submit', (e) => this.handleEmailLogin(e));
