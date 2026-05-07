@@ -683,3 +683,109 @@ footer {
     color: #888;
     margin-bottom: 5px;
 }
+
+/* Auth Modal & Login Components */
+.auth-container {
+    max-width: 400px !important;
+    padding: 30px !important;
+}
+
+.auth-tabs {
+    display: flex;
+    margin-bottom: 25px;
+    border-bottom: 1px solid #eee;
+}
+
+.auth-tab {
+    flex: 1;
+    padding: 10px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    color: #666;
+    transition: all 0.3s;
+}
+
+.auth-tab.active {
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--primary-color);
+}
+
+.social-login {
+    margin: 20px 0;
+}
+
+.btn-social {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.3s;
+}
+
+.btn-social:hover {
+    background: #f8f8f8;
+}
+
+.btn-social img {
+    width: 20px;
+}
+
+.divider {
+    text-align: center;
+    position: relative;
+    margin: 20px 0;
+}
+
+.divider::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 100%;
+    height: 1px;
+    background: #eee;
+}
+
+.divider span {
+    background: white;
+    padding: 0 10px;
+    position: relative;
+    color: #999;
+    font-size: 0.8rem;
+}
+
+.full-width {
+    width: 100%;
+}
+
+#user-profile {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 5px 15px;
+    border-radius: 20px;
+    margin-left: 10px;
+}
+
+#user-display-name {
+    font-size: 0.9rem;
+    color: var(--white);
+}
+
+@media (max-width: 768px) {
+    #user-profile {
+        margin: 10px 0;
+        justify-content: space-between;
+        background: rgba(0, 0, 0, 0.2);
+    }
+}
+

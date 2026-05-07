@@ -4,24 +4,22 @@
 **UP Police Citizen Service & Incident Reporting Portal**: A web-based application designed for citizens to report incidents and track their status, with an administrative dashboard for police technical services.
 
 ## Project Type
-**Status:** Functional Prototype (Full-Stack Architecture)
-**Current Version:** `1.0.6-final-stable`
+**Status:** Stable Release (Full-Stack Architecture)
+**Current Version:** `1.1.0-auth-stable`
 
 ## Current Structure
-- `index.html`: Main structure of the application.
-- `script.js`: Frontend logic, communicating with the Node.js backend.
-- `ai-assistant.js`: Frontend AI chat interface logic and AI utility functions.
-- `server.js`: Secure Node.js/Express backend (v1.0.6) handling AI proxying and Supabase DB.
-- `package.json`: Backend dependencies (Express, Gemini SDK, Supabase SDK).
-- `style.css`: Professional government-themed styling.
-- `logo.png`: Local official logo image.
+- `index.html`: Main structure, now includes Supabase JS SDK and Auth Modals.
+- `auth.js`: New specialized module for session management and Supabase Auth logic.
+- `script.js`: Frontend logic, updated to handle authenticated API calls with JWT headers.
+- `ai-assistant.js`: Frontend AI chat logic, now sends auth headers for analysis tasks.
+- `server.js`: Secure Node.js backend using Modern JWKS (ECC P-256) for token verification.
+- `package.json`: Dependencies updated (added `jsonwebtoken` and `jwks-rsa`).
 
 ## Features
-- **Incident Reporting:** Form for citizens to submit details with AI-powered auto-categorization.
-- **Cyber Mitra AI Assistant:** Real-time Hinglish-speaking chatbot to guide citizens and categorize incidents.
-- **Status Tracking:** Search functionality to track reports using a unique Complaint ID.
-- **Admin Dashboard:** Management view with AI insights (Priority assessment, Executive Summary, and Translation).
-- **Responsive Design:** Mobile-friendly navigation and layout.
+- **Unified Authentication:** Social (Google/Facebook) and Email/Password login via Supabase.
+- **Admin Security:** Dashboard restricted to users with `is_admin: true` in the profiles table.
+- **Modern Security:** Backend uses asymmetric ECC keys for token validation (No shared secrets).
+- **Incident Reporting:** Linked to user accounts for personal tracking.
 
 ## AI Integration (Cyber Mitra)
 The portal features a sophisticated AI integration powered by **Google Gemini 1.5 Flash**.

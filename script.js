@@ -4,23 +4,50 @@
  */
 
 const BACKEND_URL = "https://cyber-mitra-backend.onrender.com";
+// Replace with your actual Supabase credentials
+const SUPABASE_URL = "https://psusshcvadbbjbhgngxw.supabase.co";
+const SUPABASE_KEY = "sb_publishable_HuUL2f5Me4pZ1Eo3nUnsfQ_rrIe-Eui"; 
 
 const app = {
     // Current state
     complaints: [],
     
     init: function() {
+        // 1. Initialize Auth first
+        auth.init(SUPABASE_URL, SUPABASE_KEY);
+        
         this.loadData();
         this.attachEventListeners();
-        console.log("UP Police Portal Initialized (Full-Stack)");
+        console.log("UP Police Portal Initialized (v1.1.0-auth)");
+    },
+
+    /**
+     * Get Headers with JWT Token
+     */
+    getAuthHeaders: function() {
+        const token = auth.session?.access_token;
+        return {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        };
     },
 
     /**
      * Load data from Supabase via Backend
      */
     loadData: async function() {
+        if (!auth.session) return; // Wait for login
+
         try {
-            const response = await fetch(`${BACKEND_URL}/api/reports`);
+            const response = await fetch(`${BACKEND_URL}/api/reports`, {
+                headers: this.getAuthHeaders()
+            });
+            
+            if (response.status === 403) {
+                console.log("Not an admin, hiding admin view.");
+                return;
+            }
+
             this.complaints = await response.json();
             this.renderAdminTable();
             this.updateStats();
@@ -108,10 +135,16 @@ const app = {
         document.getElementById('success-modal').classList.add('active');
 
         try {
+            // Check if user is logged in
+            if (!auth.session) {
+                auth.showModal();
+                return;
+            }
+
             // 1. Save to Database
             await fetch(`${BACKEND_URL}/api/reports`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: this.getAuthHeaders(),
                 body: JSON.stringify(complaint)
             });
 
@@ -132,7 +165,7 @@ const app = {
             // Update the record with AI data
             await fetch(`${BACKEND_URL}/api/reports/${id}`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
+                headers: this.getAuthHeaders(),
                 body: JSON.stringify({ 
                     ai_urgency: urgency, 
                     ai_translation: translation 
@@ -156,7 +189,9 @@ const app = {
         if (!trackId) return;
 
         try {
-            const response = await fetch(`${BACKEND_URL}/api/reports/${trackId}`);
+            const response = await fetch(`${BACKEND_URL}/api/reports/${trackId}`, {
+                headers: this.getAuthHeaders()
+            });
             if (response.ok) {
                 const found = await response.json();
                 resultArea.innerHTML = `
@@ -251,7 +286,7 @@ const app = {
                 // Save it back to DB
                 await fetch(`${BACKEND_URL}/api/reports/${id}`, {
                     method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: this.getAuthHeaders(),
                     body: JSON.stringify({ ai_urgency: urgency })
                 });
             }
@@ -262,7 +297,7 @@ const app = {
         try {
             await fetch(`${BACKEND_URL}/api/reports/${id}`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
+                headers: this.getAuthHeaders(),
                 body: JSON.stringify({ status })
             });
             this.loadData();
@@ -272,7 +307,10 @@ const app = {
     deleteReport: async function(id) {
         if (!confirm("Delete this report?")) return;
         try {
-            await fetch(`${BACKEND_URL}/api/reports/${id}`, { method: 'DELETE' });
+            await fetch(`${BACKEND_URL}/api/reports/${id}`, { 
+                method: 'DELETE',
+                headers: this.getAuthHeaders()
+            });
             this.closeDetailModal();
             this.loadData();
         } catch (e) { console.error(e); }

@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const jwt = require('jsonwebtoken');
+const jwksClient = require('jwks-rsa');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -8,7 +10,7 @@ const { createClient } = require('@supabase/supabase-js');
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 10000;
-const APP_VERSION = "1.0.6-final-stable";
+const APP_VERSION = "1.1.0-auth-jwks";
 
 // Initialize Supabase
 const supabase = createClient(
@@ -16,12 +18,68 @@ const supabase = createClient(
     process.env.SUPABASE_KEY
 );
 
+// JWKS Client for Modern Supabase Auth (ECC P-256)
+const client = jwksClient({
+  jwksUri: `${process.env.SUPABASE_URL}/auth/v1/.well-known/jwks.json`,
+  cache: true,
+  rateLimit: true
+});
+
+/**
+ * Helper: Get Signing Key from JWKS
+ */
+function getKey(header, callback) {
+  client.getSigningKey(header.kid, function(err, key) {
+    if (err) return callback(err);
+    const signingKey = key.getPublicKey();
+    callback(null, signingKey);
+  });
+}
+
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // 2. Middleware
 app.use(cors());
 app.use(express.json());
+
+/**
+ * Middleware: Authenticate User via Modern Supabase JWT (JWKS)
+ */
+const authenticateUser = (req, res, next) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ error: "Authentication required" });
+
+    // Verify using JWKS and ECC algorithm (ES256)
+    jwt.verify(token, getKey, { algorithms: ['ES256'] }, (err, decoded) => {
+        if (err) {
+            console.error("JWT Verification Error:", err.message);
+            return res.status(401).json({ error: "Invalid or expired token" });
+        }
+        req.user = decoded;
+        next();
+    });
+};
+
+/**
+ * Middleware: Check if User is Admin
+ */
+const requireAdmin = async (req, res, next) => {
+    try {
+        const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', req.user.sub)
+            .single();
+
+        if (error || !profile?.is_admin) {
+            return res.status(403).json({ error: "Admin access required" });
+        }
+        next();
+    } catch (error) {
+        res.status(500).json({ error: "Authorization check failed" });
+    }
+};
 
 // Helper: AI Retry Logic
 async function callGeminiWithRetry(modelObj, method, payload, retries = 2) {
@@ -54,11 +112,10 @@ app.get('/', (req, res) => {
 });
 
 /**
- * AI Chat Endpoint (Cyber Mitra)
+ * AI Chat Endpoint (Cyber Mitra) - Accessible to all (or logged in users if preferred)
  */
 app.post('/api/chat', async (req, res) => {
     const { message, history } = req.body;
-    // 'gemini-flash-latest' is the most stable alias found in your ListModels output
     const MODEL_NAME = "gemini-flash-latest"; 
 
     try {
@@ -85,10 +142,13 @@ app.post('/api/chat', async (req, res) => {
 });
 
 /**
- * Save Incident Report
+ * Save Incident Report (Authenticated Users Only)
  */
-app.post('/api/reports', async (req, res) => {
-    const reportData = req.body;
+app.post('/api/reports', authenticateUser, async (req, res) => {
+    const reportData = {
+        ...req.body,
+        user_id: req.user.sub // Attach the authenticated user's ID
+    };
     try {
         const { data, error } = await supabase.from('reports').insert([reportData]).select();
         if (error) {
@@ -102,13 +162,20 @@ app.post('/api/reports', async (req, res) => {
 });
 
 /**
- * Get Report by ID (Tracking)
+ * Get Report by ID (Tracking) - Owners or Admins only
  */
-app.get('/api/reports/:id', async (req, res) => {
+app.get('/api/reports/:id', authenticateUser, async (req, res) => {
     const { id } = req.params;
     try {
         const { data, error } = await supabase.from('reports').select('*').eq('id', id.toUpperCase()).single();
-        if (error) return res.status(404).json({ error: "Not found" });
+        if (error || !data) return res.status(404).json({ error: "Not found" });
+
+        // Security Check: Only the owner or an admin can see the report
+        const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', req.user.sub).single();
+        if (data.user_id !== req.user.sub && !profile?.is_admin) {
+            return res.status(403).json({ error: "Access denied" });
+        }
+
         res.json(data);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -116,9 +183,9 @@ app.get('/api/reports/:id', async (req, res) => {
 });
 
 /**
- * Get All Reports (Admin Dashboard)
+ * Get All Reports (Admin Dashboard Only)
  */
-app.get('/api/reports', async (req, res) => {
+app.get('/api/reports', authenticateUser, requireAdmin, async (req, res) => {
     try {
         const { data, error } = await supabase.from('reports').select('*').order('created_at', { ascending: false });
         if (error) throw error;
@@ -129,9 +196,9 @@ app.get('/api/reports', async (req, res) => {
 });
 
 /**
- * Update Report
+ * Update Report (Admin Only)
  */
-app.patch('/api/reports/:id', async (req, res) => {
+app.patch('/api/reports/:id', authenticateUser, requireAdmin, async (req, res) => {
     const { id } = req.params;
     try {
         const { data, error } = await supabase.from('reports').update(req.body).eq('id', id.toUpperCase()).select();
@@ -143,9 +210,9 @@ app.patch('/api/reports/:id', async (req, res) => {
 });
 
 /**
- * Delete Report
+ * Delete Report (Admin Only)
  */
-app.delete('/api/reports/:id', async (req, res) => {
+app.delete('/api/reports/:id', authenticateUser, requireAdmin, async (req, res) => {
     const { id } = req.params;
     try {
         const { error } = await supabase.from('reports').delete().eq('id', id.toUpperCase());
@@ -157,9 +224,9 @@ app.delete('/api/reports/:id', async (req, res) => {
 });
 
 /**
- * AI Features Proxy
+ * AI Features Proxy (Admin or Authenticated User)
  */
-app.post('/api/ai/analyze', async (req, res) => {
+app.post('/api/ai/analyze', authenticateUser, async (req, res) => {
     const { prompt, text } = req.body;
     const MODEL_NAME = "gemini-flash-latest";
 
@@ -181,3 +248,4 @@ app.post('/api/ai/analyze', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT} (v${APP_VERSION})`);
 });
+

@@ -89,7 +89,7 @@ const aiAssistant = {
         try {
             const response = await fetch(`${BACKEND_URL}/api/ai/analyze`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: typeof app !== 'undefined' ? app.getAuthHeaders() : { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ prompt, text })
             });
             const data = await response.json();
