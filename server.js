@@ -51,7 +51,7 @@ app.use((req, res, next) => {
 });
 
 // Serve static files from the current directory
-app.use(express.static(path.join(__dirname, '.')));
+app.use(express.static(path.resolve(__dirname, '.')));
 
 /**
  * Middleware: Authenticate User via Modern Supabase JWT (JWKS)
@@ -118,14 +118,14 @@ async function callGeminiWithRetry(modelObj, method, payload, retries = 2) {
 
 // Serve the Frontend (Main Entry Point)
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile(path.resolve(__dirname, 'index.html'));
 });
 
 // Fallback for SPA routing and Auth callbacks (Any route not matching an API endpoint)
 app.get('*', (req, res, next) => {
     // If the request is for an API endpoint that doesn't exist, let it fall through or return 404
     if (req.path.startsWith('/api/')) return next();
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile(path.resolve(__dirname, 'index.html'));
 });
 
 /**

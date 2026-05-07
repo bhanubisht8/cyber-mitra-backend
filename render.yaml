@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: cyber-mitra-backend
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: /api/*
+      - type: rewrite
+        source: /*
+        destination: /index.html
