@@ -88,10 +88,17 @@ const auth = {
      * Auth Actions
      */
     signInWithGoogle: async function() {
-        await this.supabase.auth.signInWithOAuth({
+        const { data, error } = await this.supabase.auth.signInWithOAuth({
             provider: 'google',
-            options: { redirectTo: window.location.origin }
+            options: { 
+                redirectTo: window.location.origin,
+                queryParams: {
+                    access_type: 'offline',
+                    prompt: 'consent'
+                }
+            }
         });
+        if (error) alert("Google Sign-In Error: " + error.message);
     },
 
     handleEmailLogin: async function(e) {
