@@ -108,33 +108,25 @@ async function callGeminiWithRetry(modelObj, method, payload, retries = 2) {
 // 3. API Routes
 
 /**
- * Diagnostic: List Available Models and Capabilities
+ * Diagnostic: List Available Models via Direct API Call
  */
 app.get('/api/ai/models', async (req, res) => {
     try {
-        if (!process.env.GEMINI_API_KEY) {
-            return res.status(500).json({ error: "API Key missing." });
-        }
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) return res.status(500).json({ error: "API Key missing." });
 
-        const modelList = [];
-        // listModels() returns an async iterator
-        const result = await genAI.listModels();
-        for await (const model of result) {
-            modelList.push({
-                name: model.name,
-                version: model.version,
-                displayName: model.displayName,
-                description: model.description,
-                supportedMethods: model.supportedMethods
-            });
-        }
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+        const data = await response.json();
+        
+        if (!response.ok) throw new Error(data.error?.message || "Failed to fetch models");
+
         res.json({ 
             success: true, 
-            count: modelList.length,
-            models: modelList 
+            count: data.models ? data.models.length : 0,
+            models: data.models || []
         });
     } catch (error) {
-        console.error("ListModels Error:", error.message);
+        console.error("Direct ListModels Error:", error.message);
         res.status(500).json({ error: error.message });
     }
 });
