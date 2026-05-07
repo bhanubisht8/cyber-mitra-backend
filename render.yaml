@@ -18,10 +18,5 @@ services:
         sync: false
       - key: SUPABASE_JWT_SECRET
         sync: false
-    routes:
-      - type: rewrite
-        source: /api/*
-        destination: /api/*
-      - type: rewrite
-        source: /*
-        destination: /index.html
+      - key: SUPABASE_PROJECT_ID
+        sync: false
