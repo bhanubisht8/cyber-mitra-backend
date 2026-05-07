@@ -18,6 +18,12 @@ const auth = {
      */
     checkSession: async function() {
         const { data: { session } } = await this.supabase.auth.getSession();
+        
+        // Clean up hash fragment from URL after OAuth callback
+        if (window.location.hash && (window.location.hash.includes('access_token') || window.location.hash.includes('error'))) {
+            history.replaceState(null, document.title, window.location.pathname + window.location.search);
+        }
+
         this.updateUI(session);
 
         // Listen for auth changes

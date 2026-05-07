@@ -1,3 +1,4 @@
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
@@ -42,6 +43,15 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // 2. Middleware
 app.use(cors());
 app.use(express.json());
+
+// Request Logger
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+    next();
+});
+
+// Serve static files from the current directory
+app.use(express.static(path.join(__dirname, '.')));
 
 /**
  * Middleware: Authenticate User via Modern Supabase JWT (JWKS)
@@ -106,9 +116,16 @@ async function callGeminiWithRetry(modelObj, method, payload, retries = 2) {
 
 // 3. Routes
 
-// Health Check
+// Serve the Frontend (Main Entry Point)
 app.get('/', (req, res) => {
-    res.send(`Cyber Mitra Backend is Live! (v${APP_VERSION})`);
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Fallback for SPA routing and Auth callbacks (Any route not matching an API endpoint)
+app.get('*', (req, res, next) => {
+    // If the request is for an API endpoint that doesn't exist, let it fall through or return 404
+    if (req.path.startsWith('/api/')) return next();
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 /**
