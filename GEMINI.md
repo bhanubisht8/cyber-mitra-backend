@@ -70,3 +70,7 @@ The portal features a sophisticated AI integration powered by **Google Gemini 1.
 ### 4. Language & Cultural Nuance
 **Problem:** Standard AI responses were too formal or entirely in English.
 **Troubleshoot:** Engineered a specific **System Instruction** for Cyber Mitra to use "Hinglish" and maintain an empathetic yet professional tone.
+
+### 5. Google OAuth Redirect (v1.1.0)
+**Problem:** After successful Google login, the app redirected to a "Not Found" page on Render despite having valid tokens in the URL.
+**Troubleshoot:** Identified a **Domain Mismatch**. Configurations were split between `cyber-mitra-portal` and `cyber-mitra-backend`. Standardizing ALL settings (Supabase Site URL, Redirect URLs, and Google Origins) to `https://cyber-mitra-backend.onrender.com` resolved the session initialization failure.
