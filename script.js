@@ -3,7 +3,7 @@
  * Refactored to use Secure Render Backend & Supabase
  */
 
-const BACKEND_URL = "https://cyber-mitra-backend.onrender.com";
+const BACKEND_URL = "https://up-cyber-mitra-production.onrender.com";
 // Replace with your actual Supabase credentials
 const SUPABASE_URL = "https://psusshcvadbbjbhgngxw.supabase.co";
 const SUPABASE_KEY = "sb_publishable_HuUL2f5Me4pZ1Eo3nUnsfQ_rrIe-Eui"; 

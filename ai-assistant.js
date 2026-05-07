@@ -3,7 +3,7 @@
  * Now refactored to use Secure Backend
  */
 
-const BACKEND_URL = "https://cyber-mitra-backend.onrender.com";
+const BACKEND_URL = "https://up-cyber-mitra-production.onrender.com";
 
 const aiAssistant = {
     chatHistory: [],
