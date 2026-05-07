@@ -11,7 +11,7 @@ const { createClient } = require('@supabase/supabase-js');
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 10000;
-const APP_VERSION = "1.1.0-fullstack-stable";
+const APP_VERSION = "1.1.1-stable";
 
 // Initialize Supabase
 const supabase = createClient(
@@ -34,6 +34,7 @@ function getKey(header, callback) {
   });
 }
 
+// Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // 2. Middleware
@@ -64,46 +65,131 @@ const authenticateUser = (req, res, next) => {
     });
 };
 
+/**
+ * Middleware: Check if User is Admin
+ */
 const requireAdmin = async (req, res, next) => {
     try {
-        const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', req.user.sub).single();
-        if (!profile?.is_admin) return res.status(403).json({ error: "Admin access required" });
+        const { data: profile, error } = await supabase.from('profiles').select('is_admin').eq('id', req.user.sub).single();
+        if (error || !profile?.is_admin) return res.status(403).json({ error: "Admin access required" });
         next();
     } catch (error) {
         res.status(500).json({ error: "Authorization failed" });
     }
 };
 
+/**
+ * Helper: AI Retry Logic
+ */
+async function callGeminiWithRetry(modelObj, method, payload, retries = 2) {
+    try {
+        if (method === 'chat') {
+            const chat = modelObj.startChat({ history: payload.history || [] });
+            const result = await chat.sendMessage(payload.message);
+            return await result.response;
+        } else {
+            const result = await modelObj.generateContent(payload);
+            return await result.response;
+        }
+    } catch (error) {
+        const errorMsg = error.message || '';
+        const isTransient = errorMsg.includes('503') || errorMsg.includes('429') || errorMsg.includes('500');
+        
+        if (isTransient && retries > 0) {
+            const delay = errorMsg.includes('429') ? 5000 : 2000;
+            console.log(`DEBUG: Gemini Error (${errorMsg}). Retrying in ${delay/1000}s...`);
+            await new Promise(r => setTimeout(r, delay));
+            return callGeminiWithRetry(modelObj, method, payload, retries - 1);
+        }
+        throw error;
+    }
+}
+
 // 3. API Routes
 
+/**
+ * AI Chat Endpoint (Cyber Mitra)
+ */
 app.post('/api/chat', async (req, res) => {
     const { message, history } = req.body;
     const MODEL_NAME = "gemini-1.5-flash-latest"; 
+
     try {
-        const model = genAI.getGenerativeModel({ model: MODEL_NAME, systemInstruction: "You are Cyber Mitra..." });
-        const result = await model.generateContent(message);
-        res.json({ text: result.response.text() });
+        if (!process.env.GEMINI_API_KEY) {
+            console.error("CRITICAL: GEMINI_API_KEY is missing in environment variables.");
+            return res.status(500).json({ error: "API Key configuration error." });
+        }
+
+        const model = genAI.getGenerativeModel({ 
+            model: MODEL_NAME,
+            systemInstruction: `You are 'Cyber Mitra', an AI Assistant for the Uttar Pradesh Police Technical Services Portal. 
+            Speak in Hinglish (Hindi + English). Be professional and empathetic. 
+            IMPORTANT: You are an AI, for emergencies call 112.`
+        });
+
+        const response = await callGeminiWithRetry(model, 'chat', { message, history });
+        res.json({ text: response.text() });
     } catch (error) {
-        res.status(500).json({ error: "AI Busy" });
+        console.error(`Gemini Chat Error (${MODEL_NAME}):`, error.message);
+        
+        // Detailed error context for the user to troubleshoot region/key issues
+        let userError = "Cyber Mitra is currently busy. Please try again later.";
+        if (error.message.includes('location')) {
+            userError = "AI service is not available in the current server region. Please contact support.";
+        } else if (error.message.includes('API key')) {
+            userError = "AI configuration error. Please check API settings.";
+        }
+
+        res.status(500).json({ error: userError, details: error.message });
     }
 });
 
 app.post('/api/reports', authenticateUser, async (req, res) => {
-    const { data, error } = await supabase.from('reports').insert([{ ...req.body, user_id: req.user.sub }]).select();
-    if (error) return res.status(500).json({ error: error.message });
-    res.json({ success: true, data });
+    try {
+        const { data, error } = await supabase.from('reports').insert([{ ...req.body, user_id: req.user.sub }]).select();
+        if (error) throw error;
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error("Report Save Error:", error.message);
+        res.status(500).json({ error: error.message });
+    }
 });
 
 app.get('/api/reports', authenticateUser, requireAdmin, async (req, res) => {
-    const { data, error } = await supabase.from('reports').select('*').order('created_at', { ascending: false });
-    if (error) return res.status(500).json({ error: error.message });
-    res.json(data);
+    try {
+        const { data, error } = await supabase.from('reports').select('*').order('created_at', { ascending: false });
+        if (error) throw error;
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 app.get('/api/reports/:id', authenticateUser, async (req, res) => {
-    const { data, error } = await supabase.from('reports').select('*').eq('id', req.params.id.toUpperCase()).single();
-    if (error) return res.status(404).json({ error: "Not found" });
-    res.json(data);
+    try {
+        const { data, error } = await supabase.from('reports').select('*').eq('id', req.params.id.toUpperCase()).single();
+        if (error) return res.status(404).json({ error: "Not found" });
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * AI Features Proxy
+ */
+app.post('/api/ai/analyze', authenticateUser, async (req, res) => {
+    const { prompt, text } = req.body;
+    const MODEL_NAME = "gemini-1.5-flash-latest";
+
+    try {
+        const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+        const response = await callGeminiWithRetry(model, 'generate', [`${prompt}:`, text]);
+        res.json({ result: response.text() });
+    } catch (error) {
+        console.error(`AI Analyze Error (${MODEL_NAME}):`, error.message);
+        res.status(500).json({ error: "AI Analysis failed.", details: error.message });
+    }
 });
 
 // 4. Frontend Serving (MUST BE LAST)
@@ -114,8 +200,8 @@ app.get('/', (req, res) => {
 });
 
 // Handle ALL other routes (SPA Fallback)
-app.get('*', (req, res) => {
-    if (req.path.startsWith('/api/')) return res.status(404).json({ error: "API not found" });
+app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api/')) return next();
     res.sendFile(path.join(publicPath, 'index.html'));
 });
 
