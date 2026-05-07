@@ -108,11 +108,43 @@ async function callGeminiWithRetry(modelObj, method, payload, retries = 2) {
 // 3. API Routes
 
 /**
+ * Diagnostic: List Available Models and Capabilities
+ */
+app.get('/api/ai/models', async (req, res) => {
+    try {
+        if (!process.env.GEMINI_API_KEY) {
+            return res.status(500).json({ error: "API Key missing." });
+        }
+
+        const modelList = [];
+        // listModels() returns an async iterator
+        const result = await genAI.listModels();
+        for await (const model of result) {
+            modelList.push({
+                name: model.name,
+                version: model.version,
+                displayName: model.displayName,
+                description: model.description,
+                supportedMethods: model.supportedMethods
+            });
+        }
+        res.json({ 
+            success: true, 
+            count: modelList.length,
+            models: modelList 
+        });
+    } catch (error) {
+        console.error("ListModels Error:", error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
  * AI Chat Endpoint (Cyber Mitra)
  */
 app.post('/api/chat', async (req, res) => {
     const { message, history } = req.body;
-    const MODEL_NAME = "gemini-1.5-flash-latest"; 
+    const MODEL_NAME = "gemini-1.5-flash"; 
 
     try {
         if (!process.env.GEMINI_API_KEY) {
@@ -180,7 +212,7 @@ app.get('/api/reports/:id', authenticateUser, async (req, res) => {
  */
 app.post('/api/ai/analyze', authenticateUser, async (req, res) => {
     const { prompt, text } = req.body;
-    const MODEL_NAME = "gemini-1.5-flash-latest";
+    const MODEL_NAME = "gemini-1.5-flash";
 
     try {
         const model = genAI.getGenerativeModel({ model: MODEL_NAME });
